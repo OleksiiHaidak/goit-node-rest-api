@@ -44,13 +44,13 @@ const updateContact = async (req, res) => {
 };
 
 const updateFavoriteStatus = async (req, res) => {
-        const { contactId } = req.params;
+        const { id } = req.params;
         const { favorite } = req.body;
 
         if (!{favorite}) {
             throw HttpError(400, "Body must be a boolean value");
         }
-        const result = await contactsService.updateStatusContact(contactId, { favorite });
+        const result = await contactsService.updateStatusContact(id, { favorite });
         if (!result) {
             throw HttpError(404, "Not found");
         }
