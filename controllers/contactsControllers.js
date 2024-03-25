@@ -22,7 +22,7 @@ const deleteContact = async (req, res) => {
         if (!result) {
             throw HttpError(404, "Not found");
         }
-        throw HttpError(200, "Delete success");
+        res.json(result);
 };
 
 const createContact = async (req, res) => {

@@ -12,12 +12,12 @@ contactsRouter.get("/", contactsControllers.getAllContacts);
 
 contactsRouter.get("/:id", isValidId, contactsControllers.getOneContact);
 
-contactsRouter.delete("/:id", contactsControllers.deleteContact);
+contactsRouter.delete("/:id", isValidId, contactsControllers.deleteContact);
 
 contactsRouter.post("/", validateBody(createContactSchema), contactsControllers.createContact);
 
-contactsRouter.put("/:id", validateBody(updateContactSchema), contactsControllers.updateContact);
+contactsRouter.put("/:id", isValidId, validateBody(updateContactSchema), contactsControllers.updateContact);
 
-contactsRouter.patch("/:contactId/favorite", validateBody(updateStatusSchema), contactsControllers.updateFavoriteStatus);
+contactsRouter.patch("/:contactId/favorite", isValidId, validateBody(updateStatusSchema), contactsControllers.updateFavoriteStatus);
 
 export default contactsRouter;
