@@ -3,13 +3,15 @@ import HttpError from "../helpers/HttpError.js";
 import ctrlWrapper from "../helpers/ctrlWrapper.js";
 
 const getAllContacts = async (req, res) => {
-        const result = await contactsService.listContacts();
+        const { _id: owner } = req.user;
+        const result = await contactsService.listContacts({owner});
         res.json(result);
 };
 
 const getOneContact = async (req, res) => {
+        const { _id: owner } = req.user;
         const { id } = req.params;
-        const result = await contactsService.getContactById(id);
+        const result = await contactsService.getContactById({owner, _id: id});
         if (!result) {
             throw HttpError(404, "Not found");
         }
@@ -17,8 +19,9 @@ const getOneContact = async (req, res) => {
 };
 
 const deleteContact = async (req, res) => {
+        const { _id: owner } = req.user;
         const { id } = req.params;
-        const result = await contactsService.removeContact(id);
+        const result = await contactsService.removeContact({owner, _id: id});
         if (!result) {
             throw HttpError(404, "Not found");
         }
@@ -26,8 +29,8 @@ const deleteContact = async (req, res) => {
 };
 
 const createContact = async (req, res) => {
-        const data = req.body;
-        const result = await contactsService.addContact(data);
+        const { _id: owner } = req.user;
+        const result = await contactsService.addContact({...req.body, owner});
         res.status(201).json(result);
 };
 
@@ -35,8 +38,9 @@ const updateContact = async (req, res) => {
         if (Object.keys(req.body).length === 0) {
             throw HttpError(400, "Body must have at least one field");
         }
+        const { _id: owner } = req.user;
         const { id } = req.params;
-        const result = await contactsService.updContact(id, req.body);
+        const result = await contactsService.updContact({owner, _id: id}, req.body);
         if (!result) {
             throw HttpError(404, "Not found");
         }
@@ -44,13 +48,14 @@ const updateContact = async (req, res) => {
 };
 
 const updateFavoriteStatus = async (req, res) => {
+        const { _id: owner } = req.user;
         const { id } = req.params;
         const { favorite } = req.body;
 
         if (!{favorite}) {
             throw HttpError(400, "Body must be a boolean value");
         }
-        const result = await contactsService.updateStatusContact(id, { favorite });
+        const result = await contactsService.updateStatusContact({owner, _id: id}, { favorite });
         if (!result) {
             throw HttpError(404, "Not found");
         }
