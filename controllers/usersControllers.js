@@ -2,9 +2,20 @@ import HttpError from "../helpers/HttpError.js";
 import ctrlWrapper from "../helpers/ctrlWrapper.js";
 import * as usersServices from "../services/usersServices.js";
 import bcrypt from "bcrypt";
+import fs from "fs/promises";
 import jwt from "jsonwebtoken";
+import Jimp from "jimp";
+import gravatar from "gravatar";
+import { fileURLToPath } from "url";
+import path from "path";
+import User from "../models/User.js";
+
 
 const { JWT_SECRET } = process.env;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const avatarsPath = path.join(__dirname, "../", "public", "avatars");
 
 const register = async (req, res) => {
     const { email, password } = req.body;
@@ -15,11 +26,14 @@ const register = async (req, res) => {
 
     const hashPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await usersServices.register({...req.body, password: hashPassword});
+    const avatarURL = gravatar.url(email);
+
+    const newUser = await usersServices.register({...req.body, password: hashPassword, avatarURL});
     res.status(201).json({
         user: {
         email: newUser.email,
         subscription: newUser.subscription,
+        avatarURL: newUser.avatarURL,
   }
         })
 }
@@ -67,9 +81,35 @@ const current = async (req, res) => {
     })
 }
 
+const updateAvatar = async (req, res) => {
+    if (!req.file) throw HttpError(400, "Not found");
+
+    const { _id } = req.user;
+    const { path: tempUpload, originalname } = req.file;
+
+    try {
+      const image = await Jimp.read(tempUpload);
+      await image.resize(250, 250);
+      await image.writeAsync(tempUpload);
+    } catch (error) {
+      throw HttpError(500, "Internal Server Error");
+    }
+
+    const filename = `${_id}_${originalname}`;
+    const resultUpload = path.join(avatarsPath, filename);
+    await fs.rename(tempUpload, resultUpload);
+    const avatarURL = path.join("avatars", filename);
+    await User.findByIdAndUpdate(_id, { avatarURL });
+
+    res.json({
+      avatarURL,
+    });
+};
+
 export default {
     register: ctrlWrapper(register),
     login: ctrlWrapper(login),
     logout: ctrlWrapper(logout),
     current: ctrlWrapper(current),
+    updateAvatar: ctrlWrapper(updateAvatar),
 }
