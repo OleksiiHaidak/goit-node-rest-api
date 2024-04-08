@@ -82,7 +82,7 @@ const current = async (req, res) => {
 }
 
 const updateAvatar = async (req, res) => {
-    if (!req.file) throw HttpError(400, "Not found");
+    if (!req.file) throw HttpError(400, "No file uploaded");
 
     const { _id } = req.user;
     const { path: tempUpload, originalname } = req.file;
