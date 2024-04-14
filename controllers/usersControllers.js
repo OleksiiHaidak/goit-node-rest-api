@@ -9,9 +9,11 @@ import gravatar from "gravatar";
 import { fileURLToPath } from "url";
 import path from "path";
 import User from "../models/User.js";
+import { nanoid } from "nanoid";
+import sendEmail from "../helpers/sendEmail.js";
 
 
-const { JWT_SECRET } = process.env;
+const { JWT_SECRET, SENDGRID_FROM, PROJECT_URL } = process.env;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,17 +27,61 @@ const register = async (req, res) => {
     }
 
     const hashPassword = await bcrypt.hash(password, 10);
+    const verificationToken = nanoid();
 
     const avatarURL = gravatar.url(email);
 
-    const newUser = await usersServices.register({...req.body, password: hashPassword, avatarURL});
+    const newUser = await usersServices.register({...req.body, password: hashPassword, avatarURL, verificationToken});
+
+    const verifyEmail = {
+        to: email,
+        from: SENDGRID_FROM,
+        subject: 'Verify email',
+        text: 'Verify email',
+        html: `<a target="_blank" href="${PROJECT_URL}/api/users/verify/${verificationToken}">Click to verify email</a>`,
+    }
+    await sendEmail(verifyEmail);
+
     res.status(201).json({
         user: {
         email: newUser.email,
         subscription: newUser.subscription,
         avatarURL: newUser.avatarURL,
   }
-        })
+    })
+}
+
+const verify = async (req, res) => {
+    const { verificationToken } = req.params;
+    const user = await usersServices.findUser({ verificationToken });
+    if (!user) {
+        throw HttpError(404, "User not found");
+    }
+    await usersServices.updateUser({ _id: user._id }, { verify: true, verificationToken: "" })
+    
+    res.json({message: "Verification successful"})
+}
+
+const resendVerify = async (req, res) => { 
+    const { email } = req.body;
+    const user = await usersServices.findUser({ email });
+    if (!user) {
+        throw HttpError(404, "User not found");
+    }
+    if (user.verify) {
+        throw HttpError(400, "Verification has already been passed");
+    }
+
+    const verifyEmail = {
+        to: email,
+        from: SENDGRID_FROM,
+        subject: 'Verify email',
+        text: 'Verify email',
+        html: `<a target="_blank" href="${PROJECT_URL}/api/users/verify/${user.verificationToken}">Click to verify email</a>`,
+    }
+    await sendEmail(verifyEmail);
+
+    res.json({message: "Verification email sent"})
 }
 
 const login = async (req, res) => {
@@ -44,6 +90,11 @@ const login = async (req, res) => {
     if (!user) {
         throw HttpError(401, "Email or password is wrong");
     }
+
+    if (!user.verify) {
+        throw HttpError(401, "Email not verify");
+    }
+
     const passwordCompare = await bcrypt.compare(password, user.password);
     if (!passwordCompare) {
         throw HttpError(401, "Email or password is wrong");
@@ -108,6 +159,8 @@ const updateAvatar = async (req, res) => {
 
 export default {
     register: ctrlWrapper(register),
+    verify: ctrlWrapper(verify),
+    resendVerify: ctrlWrapper(resendVerify),
     login: ctrlWrapper(login),
     logout: ctrlWrapper(logout),
     current: ctrlWrapper(current),

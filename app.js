@@ -11,6 +11,7 @@ import contactsRouter from "./routes/contactsRouter.js";
 
 const { DB_HOST, PORT = 3000 } = process.env;
 
+
 const app = express();
 
 app.use(morgan("tiny"));
@@ -41,3 +42,4 @@ mongoose.connect(DB_HOST)
     console.error(error.message);
     process.exit(1);
   })
+
